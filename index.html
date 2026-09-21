@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token Efficiency 101 — Where your AI agent's tokens actually go</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2d333b;
+    --text:#e6edf3; --muted:#8b949e; --accent:#4fc3f7; --accent2:#f78166;
+    --good:#3fb950; --warn:#d29922; --maxw:820px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:.9em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:16px;overflow-x:auto}
+  pre code{background:none;border:none;padding:0}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px 80px}
+  header.hero{text-align:center;padding:56px 20px 32px}
+  .badge{display:inline-block;background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:4px 14px;font-size:.8rem;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+  h1{font-size:2.2rem;margin:16px 0 8px;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{color:var(--muted);font-size:1.05rem;max-width:600px;margin:0 auto}
+  .meta{display:flex;gap:16px;justify-content:center;margin-top:18px;color:var(--muted);font-size:.9rem;flex-wrap:wrap}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin:16px 0}
+  .leak{display:flex;gap:14px;align-items:flex-start;margin:14px 0}
+  .leak .num{flex:none;width:34px;height:34px;border-radius:50%;background:var(--panel2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.93rem}
+  th,td{border:1px solid var(--border);padding:8px 12px;text-align:left}
+  th{background:var(--panel2);color:var(--muted);font-weight:600}
+  .tokbar{height:14px;border-radius:7px;overflow:hidden;display:flex;margin:10px 0 4px;border:1px solid var(--border)}
+  .tokbar div{height:100%}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.83rem;color:var(--muted);margin-bottom:8px}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+  .progress-wrap{position:sticky;top:0;z-index:10;background:rgba(13,17,23,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);padding:10px 20px}
+  .progress-inner{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;gap:14px}
+  .pbar{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}
+  .pbar>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .4s}
+  .ptext{font-size:.82rem;color:var(--muted);white-space:nowrap}
+  .lessons-nav{display:grid;gap:10px;margin:22px 0}
+  .lesson-card{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 18px;cursor:pointer;transition:border-color .2s,transform .15s}
+  .lesson-card:hover{border-color:var(--accent);transform:translateX(3px)}
+  .lesson-card .idx{flex:none;width:36px;height:36px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
+  .lesson-card .lmeta{margin-left:auto;font-size:.78rem;color:var(--muted);white-space:nowrap}
+  .lesson-card .ltitle{font-weight:600}
+  .lesson-card .lsub{font-size:.82rem;color:var(--muted)}
+  .lesson-card.done .idx{background:var(--good);color:#0d1117;border-color:var(--good)}
+  .lesson-view{display:none}
+  .lesson-view.active{display:block}
+  .crumbs{display:flex;align-items:center;gap:10px;margin:24px 0 6px;font-size:.85rem;color:var(--muted)}
+  .crumbs button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.85rem;padding:0}
+  h2.lt{font-size:1.7rem;margin:6px 0 4px}
+  .ltag{color:var(--muted);font-size:.9rem;margin-bottom:18px}
+  .note{border-left:3px solid var(--warn);background:rgba(210,153,34,.08);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0;font-size:.95rem}
+  .tip{border-left:3px solid var(--good);background:rgba(63,185,80,.08);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0;font-size:.95rem}
+  details{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:14px 0}
+  summary{cursor:pointer;font-weight:600;color:var(--accent)}
+  .check{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:20px 0}
+  .check h4{margin:0 0 8px;color:var(--accent);font-size:.95rem}
+  .quiz-q{margin:18px 0}
+  .quiz-q h4{margin:0 0 8px}
+  .quiz-opt{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 14px;margin:6px 0;cursor:pointer;font-size:.93rem}
+  .quiz-opt:hover{border-color:var(--accent)}
+  .quiz-opt.correct{border-color:var(--good);background:rgba(63,185,80,.12)}
+  .quiz-opt.wrong{border-color:var(--accent2);background:rgba(248,81,73,.12)}
+  .quiz-exp{display:none;font-size:.9rem;color:var(--muted);margin-top:6px}
+  .quiz-exp.show{display:block}
+  .navbtns{display:flex;justify-content:space-between;margin-top:32px;gap:12px}
+  .btn{background:var(--accent);color:#0d1117;border:none;border-radius:10px;padding:11px 22px;font-weight:700;cursor:pointer;font-size:.95rem}
+  .btn.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--border)}
+  .btn:hover{filter:brightness(1.1)}
+  .checkline{display:flex;gap:10px;align-items:center;margin:20px 0;padding:14px 16px;background:var(--panel);border:1px solid var(--border);border-radius:12px}
+  .checkline input{width:18px;height:18px;accent-color:var(--good);cursor:pointer}
+  .confetti{position:fixed;inset:0;pointer-events:none;display:none}
+  footer{text-align:center;color:var(--muted);font-size:.82rem;padding:32px 20px;border-top:1px solid var(--border);margin-top:40px}
+  @media(max-width:600px){h1{font-size:1.6rem}.lesson-card .lmeta{display:none}}
+</style>
+</head>
+<body>
+<div class="progress-wrap"><div class="progress-inner">
+  <span class="ptext" id="ptext">0 / 6 complete</span>
+  <div class="pbar"><div id="pbarfill"></div></div>
+  <span class="ptext" id="ptimer">~20 min</span>
+</div></div>
+
+<div id="home">
+  <header class="hero">
+    <span class="badge">100-level · beginner</span>
+    <h1>Token Efficiency 101</h1>
+    <p class="subtitle">Where your AI coding agent's tokens actually go — and four free fixes for the leaks you can't see.</p>
+    <div class="meta"><span>⏱ ~20 minutes</span><span>📘 6 lessons</span><span>✅ Quiz + checklist</span><span>💾 Progress saved locally</span></div>
+  </header>
+  <div class="wrap">
+    <div class="card">
+      <h3 style="margin-top:0">Why this course exists</h3>
+      <p>When you hit a usage limit mid-refactor, the instinct is: <em>upgrade the plan</em> or <em>switch to a cheaper model</em>. Both miss the point. On a typical agent session, <strong>your prompts are a small fraction of the spend.</strong></p>
+      <pre><code>Tokens = what you send
+       + what the model thinks
+       + what it writes back
+       + everything you explain again tomorrow</code></pre>
+      <p>This course teaches you to see the four leaks around your prompt — and gives you one free, open-source fix for each.</p>
+    </div>
+    <div class="lessons-nav" id="lessonsNav"></div>
+    <div class="note">⚠️ <strong>Honest caveat:</strong> compression works best on <em>repetitive payloads</em> (JSON, logs, search results). Plain-prose chat sessions see small gains. Headline numbers like "95%" apply to structured data — realistic coding-agent savings are ~20–40%.</div>
+    <footer>Sources: <a href="https://github.com/headroomlabs-ai/headroom" target="_blank">headroomlabs-ai/headroom</a> · ZIRU, "4 Free Tools Ended My Claude Code Token Panic" (Level Up Coding) · Firecrawl: 12 Ways to Cut Token Consumption · dev.to: 9 Verified Tools to Stop Burning Claude Tokens</footer>
+  </div>
+</div>
+
+<div class="wrap"><div id="lessonViews"></div></div>
+<canvas class="confetti" id="confetti"></canvas>
+
+<script>
+const LESSONS=[
+ {id:"00",title:"Where your tokens actually go",sub:"The mental model",time:3,
+  html:`
+  <p>Run this thought experiment. Last time your agent burned through its limit during a refactor, how much of that was your typed instructions? For most developers: surprisingly little.</p>
+  <div class="legend">
+    <span><span class="dot" style="background:#4fc3f7"></span>Your prompts ~12%</span>
+    <span><span class="dot" style="background:#f78166"></span>Tool results ~40%</span>
+    <span><span class="dot" style="background:#d29922"></span>Model output ~20%</span>
+    <span><span class="dot" style="background:#a371f7"></span>Re-explained context ~18%</span>
+  </div>
+  <div class="tokbar">
+    <div style="width:12%;background:#4fc3f7"></div>
+    <div style="width:40%;background:#f78166"></div>
+    <div style="width:20%;background:#d29922"></div>
+    <div style="width:18%;background:#a371f7"></div>
+    <div style="width:10%;background:#1c2330"></div>
+  </div>
+  <p>The article this course is based on puts it bluntly:</p>
+  <div class="tip">"The real spend is the file your agent opened in full when it needed nine lines. The grep results it scanned and threw away. The 300-line class it wrote when 40 lines would have shipped. The Monday morning where you explain your project architecture from scratch, again."</div>
+  <h3>Why "write shorter prompts" doesn't fix it</h3>
+  <p>Standard advice targets the smallest slice. Meanwhile:</p>
+  <ul>
+    <li><strong>Tool results are re-sent every turn.</strong> A 5,000-token file read doesn't cost 5,000 once — it rides in context for dozens of turns.</li>
+    <li><strong>Output tokens cost multiples of input</strong> on frontier models. Verbosity is the most expensive habit.</li>
+    <li><strong>Agents are amnesiacs.</strong> No memory = you pay to re-transmit your architecture every session.</li>
+  </ul>
+  <div class="check"><h4>✅ Check yourself</h4>
+  <p>Why is a single big file read more expensive than its token count suggests?</p>
+  <details><summary>Reveal answer</summary>Because tool results stay in the conversation context and get re-sent to the model on every subsequent turn of the session.</details></div>`},
+ {id:"01",title:"Stop sending junk to the model",sub:"Leak #1 · Tool: Headroom",time:4,
+  html:`
+  <p><a href="https://github.com/headroomlabs-ai/headroom" target="_blank">Headroom</a> is a free, open-source proxy that sits <strong>between your agent and the model</strong> and compresses what flows through: tool outputs, logs, file reads, RAG chunks, even conversation history. Compression runs <strong>locally on your machine</strong> — nothing ships to a third party.</p>
+  <p>The clever part: it's <strong>reversible compression</strong>. Originals are cached locally, and the model can pull full text back when it genuinely needs it.</p>
+  <h3>What the benchmarks actually say</h3>
+  <table><tr><th>Scenario</th><th>Before</th><th>After</th><th>Saved</th></tr>
+  <tr><td>Code search (100 results)</td><td>17,199</td><td>13,597</td><td><strong>21%</strong></td></tr>
+  <tr><td>SRE incident debugging</td><td>55,957</td><td>24,340</td><td><strong>57%</strong></td></tr>
+  <tr><td>Codebase exploration</td><td>58,801</td><td>33,895</td><td><strong>42%</strong></td></tr>
+  <tr><td>GitHub issue triage</td><td>46,067</td><td>32,429</td><td><strong>30%</strong></td></tr></table>
+  <p>Tagline: <em>"20% fewer tokens for coding agents, 60–95% fewer tokens for JSON, same answers."</em> Note the honesty — coding agents get ~20%, not the headline 95%.</p>
+  <h3>Hands-on (2 minutes)</h3>
+  <pre><code>pip install "headroom-ai[all]"
+
+# Option A: wrap your agent (proxy + auto-config)
+headroom wrap claude
+
+# Option B: plain proxy for any OpenAI-compatible client
+headroom proxy --port 8787
+
+# Undo anytime
+headroom unwrap claude</code></pre>
+  <p>After a few days, <code>headroom savings</code> shows your running total.</p>
+  <div class="note">⚠️ <strong>Before you install:</strong> an anonymous telemetry beacon is ON by default (sends ratios + model IDs, never code). Disable: <code>HEADROOM_BEACON=off</code>, <code>DO_NOT_TRACK=1</code>, or <code>--offline</code>. Latency is negligible (~0.2 ms on a 10K-token payload).</div>
+  <div class="check"><h4>✅ Check yourself</h4>
+  <p>Why doesn't the compression proxy break your provider's prompt caching?</p>
+  <details><summary>Reveal answer</summary>It compresses only newly added bytes, leaving the earlier prefix untouched — so the provider's KV-cache prefix still matches and the cache discount still applies.</details></div>`},
+ {id:"02",title:"Stop reading the whole file",sub:"Leak #2 · Semantic navigation, RTK",time:4,
+  html:`
+  <p>Your agent needed nine lines. It read 900. Then it ran a grep that returned 100 matches — and every one rode in context for the next twenty turns.</p>
+  <h3>Fix 1: Navigate instead of ingest</h3>
+  <p><strong>Semantic navigation tools</strong> (e.g., the Serena MCP server — which Headroom's <code>wrap</code> installs automatically) give the agent symbol-level operations: "find <code>parseConfig</code>", "show lines 40–60", "list methods of this class" — instead of whole-file dumps. One instruction line changes behavior:</p>
+  <pre><code>"When exploring, prefer reading specific line ranges
+ and symbol definitions over whole files."</code></pre>
+  <h3>Fix 2: Compress command output at the source</h3>
+  <p><strong>RTK</strong> intercepts the noisiest agent commands — <code>git diff</code>, <code>grep</code>, <code>ls</code>, <code>tree</code>, <code>log</code> — and emits compact versions. Reported: <strong>20–40% fewer input tokens</strong> in command-heavy sessions.</p>
+  <h3>Fix 3: Pack context deliberately</h3>
+  <p>For "brief the agent on this repo" moments, tools like <strong>repomix</strong> or <strong>codesight</strong> produce structured, tree-shaken summaries instead of concatenating everything. Combined with the above, reports of <strong>60–70% total bill reduction</strong>.</p>
+  <table><tr><th>The agent asks for…</th><th>Cheap answer</th><th>Expensive answer</th></tr>
+  <tr><td>"Where is X defined?"</td><td>symbol lookup / line range</td><td>read whole file</td></tr>
+  <tr><td>"What changed?"</td><td><code>git diff</code> (compressed)</td><td>paste the module</td></tr>
+  <tr><td>"How is this repo organized?"</td><td>pre-built context pack</td><td>free-range exploration</td></tr></table>
+  <div class="tip">💡 <strong>See the leak yourself:</strong> run a normal session, then ask your agent <em>"List your tool calls this session with approximate token counts."</em> Most people find one or two file reads plus a grep dump caused most of the session's context.</div>
+  <div class="check"><h4>✅ Check yourself</h4>
+  <p>Your agent greps for a name and gets 100 results. How many times does the model pay for them?</p>
+  <details><summary>Reveal answer</summary>Once per subsequent turn — results persist in context until compacted or dropped. Ten more turns ≈ ten times the cost.</details></div>`},
+ {id:"03",title:"Stop paying for ceremony",sub:"Leak #3 · Output shaping",time:3,
+  html:`
+  <p>You pay for input once per turn — but <strong>output tokens typically cost several times more</strong> than input on frontier models. And a lot of output is ceremony:</p>
+  <ul>
+    <li>The <em>"Great, let me now..."</em> preamble</li>
+    <li>Your own file printed straight back at you as a "summary"</li>
+    <li>Deep extended thinking spent on reading one config file</li>
+  </ul>
+  <h3>What output shaping does</h3>
+  <p>Headroom's output shaper (free, off by default) does two things:</p>
+  <ol>
+    <li><strong>Verbosity steering</strong> — appends a short "be terse" note to the <em>end</em> of the system prompt. End-placement matters: the cached prefix stays byte-identical, so your prompt cache still hits.</li>
+    <li><strong>Effort routing</strong> — dials thinking down when the model is merely resuming after a tool result. New questions and real errors keep full effort.</li>
+  </ol>
+  <pre><code>export HEADROOM_OUTPUT_SHAPER=1   # read live — no restart needed
+headroom proxy --port 8787</code></pre>
+  <p>Measured honestly: the project holds out 10% of conversations as an unshaped control (<code>HEADROOM_OUTPUT_HOLDOUT=0.1</code>), so the ~<strong>31% output savings</strong> figure is measured, not estimated (95% CI: 27.7–35.7%).</p>
+  <h3>The zero-tool version: habits</h3>
+  <p>Put this in your instruction file (CLAUDE.md / .cursorrules / AGENTS.md):</p>
+  <pre><code>- Don't repeat file contents back; summarize changes as diffs.
+- Skip preamble and closing summaries.
+- Prefer editing existing code over rewriting files.
+- Don't restate the task before solving it.</code></pre>
+  <div class="check"><h4>✅ Check yourself</h4>
+  <p>Why append "be terse" at the <em>end</em> of the system prompt instead of rewriting it?</p>
+  <details><summary>Reveal answer</summary>Providers cache the prompt prefix. Appending at the end leaves the cached prefix byte-identical, keeping the prompt-cache discount while still steering behavior.</details></div>`},
+ {id:"04",title:"Stop explaining your project twice",sub:"Leak #4 · Persistent memory",time:3,
+  html:`
+  <p>Every fresh session, your agent knows nothing. So you (or it) re-derive your architecture, conventions, and naming rules — and <strong>you pay for that re-explanation every session</strong>, in time and tokens.</p>
+  <h3>Tier 1: The instruction file (free, 5 minutes, do today)</h3>
+  <p>Every major agent reads a project instructions file at startup — <code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.cursorrules</code>. Keep it short and factual:</p>
+  <pre><code># Project
+Monorepo: FastAPI backend in /api, React in /web,
+shared types in /packages/shared.
+
+# Conventions
+- Python: ruff, type hints required.
+- Commits: Conventional Commits.
+- Never edit /packages/generated.
+
+# Decisions
+- 2026-09: chose Postgres over Mongo (see ADR-007).</code></pre>
+  <div class="note">⚠️ <strong>Why short matters:</strong> this file is re-sent in <em>every</em> session's context. A 2,000-token CLAUDE.md costs 2,000 × every turn × every session. Trim it like a landing page. Path-scoped rules cut it further.</div>
+  <h3>Tier 2: Automatic memory</h3>
+  <ul>
+    <li><strong>claude-mem</strong> and similar plugins automatically compress and persist each session, then feed relevant prior context back on demand.</li>
+    <li><strong>Headroom</strong> includes cross-agent memory — a shared store across Claude, Codex, Gemini, and Grok with auto-dedup, plus <code>headroom learn</code>, which mines failed sessions and writes corrections to your instruction file automatically.</li>
+  </ul>
+  <div class="tip">💡 <strong>The test:</strong> start a new session and ask <em>"What is this project and its conventions?"</em> Right answer without typing anything → memory works. Hallucination or "I don't have context" → back to Tier 1.</div>
+  <div class="check"><h4>✅ Check yourself</h4>
+  <p>Why is a huge CLAUDE.md self-defeating?</p>
+  <details><summary>Reveal answer</summary>It's re-sent as context in every session and every turn — constant token bloat. Keep it minimal and path-scoped.</details></div>`},
+ {id:"05",title:"Final quiz + your 20-minute setup",sub:"Lock it in",time:3,
+  html:`
+  <h3>Quiz</h3>
+  <div id="quiz"></div>
+  <div id="quizScore" style="display:none" class="card"></div>
+  <h3 style="margin-top:30px">Your 20-minute setup checklist</h3>
+  <table>
+    <tr><th>⏱</th><th>Do</th><th>Effect</th></tr>
+    <tr><td>3 min</td><td>Write a minimal <code>CLAUDE.md</code> / <code>AGENTS.md</code></td><td>Kills the re-explanation leak</td></tr>
+    <tr><td>2 min</td><td>Add anti-ceremony rules (no echo-back, prefer diffs)</td><td>Trims expensive output</td></tr>
+    <tr><td>2 min</td><td>Add "prefer line ranges / symbol lookups"</td><td>Shrinks exploration cost</td></tr>
+    <tr><td>5 min</td><td><code>pip install "headroom-ai[all]"</code> && <code>headroom wrap claude</code> (+ <code>HEADROOM_BEACON=off</code>)</td><td>Compresses everything else</td></tr>
+    <tr><td>3 min</td><td>Run one real task; check <code>headroom savings</code></td><td>Baseline number</td></tr>
+    <tr><td>5 min</td><td>Revisit in a few days — is the number climbing?</td><td>Loop closed 🎉</td></tr>
+  </table>
+  <h3>Where to go next (200-level ideas)</h3>
+  <ul>
+    <li><strong>Measure before optimizing:</strong> <code>ccusage</code> gives per-session/per-model cost reports from Claude Code's local logs.</li>
+    <li><strong>Model routing:</strong> big model for design, small one for mechanical edits.</li>
+    <li><strong>Read the source:</strong> the <a href="https://github.com/headroomlabs-ai/headroom" target="_blank">Headroom repo</a> documents its compressor pipeline (CacheAligner → ContentRouter → compressor → CCR) — a great case study in what compresses well.</li>
+  </ul>`}
+];
+
+const QUIZ=[
+ {q:"Rank by typical share of a session's token spend (highest first):",
+  opts:["Your prompts > tool results > model output","Tool results > model output > your prompts","Model output > your prompts > tool results"],a:1,
+  exp:"Tool results dominate (~40%), then output (~20%), then your prompts (~12%) — which is why 'write shorter prompts' advice misses the point."},
+ {q:"Headroom's headline claim is '60–95% fewer tokens.' For a normal coding-agent session, expect roughly:",
+  opts:["60–95%","~20% (up to ~40% exploration-heavy)","0% — compression only helps chatbots"],a:1,
+  exp:"The big numbers apply to repetitive JSON/structured outputs. Coding-agent workloads realistically save ~20–40%."},
+ {q:"Why is verbose OUTPUT often more expensive per token than input?",
+  opts:["Output tokens are priced at a multiple of input on frontier models","Output is billed twice","They cost the same"],a:0,
+  exp:"Frontier models price output at a multiple of input — preamble, echo-back, and overthinking are the most expensive words in a session."},
+ {q:"A teammate installs a token-compression proxy at work. First thing to check?",
+  opts:["Its GitHub star count","Whether it makes the model faster","What data leaves your machine, and how to turn telemetry off"],a:2,
+  exp:"Check telemetry/data-flow defaults (e.g. HEADROOM_BEACON=off / DO_NOT_TRACK=1). Prefer local-only tools for sensitive code."},
+ {q:"Your CLAUDE.md has grown to 4,000 tokens of notes. Problem and fix?",
+  opts:["None — more context is always better","It's re-sent every turn of every session; trim to essentials + path-scoped rules","Delete it entirely"],a:1,
+  exp:"Instruction files are constant overhead in every session. Keep them minimal, dated, and path-scoped."}
+];
+
+const KEY="tok-eff-101";
+let state=JSON.parse(localStorage.getItem(KEY)||'{"done":[]}');
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+
+// build home nav
+const nav=document.getElementById('lessonsNav');
+LESSONS.forEach((l,i)=>{
+  const d=document.createElement('div');d.className='lesson-card';d.id='nav-'+l.id;
+  d.innerHTML=`<div class="idx">${i}</div><div><div class="ltitle">${l.title}</div><div class="lsub">${l.sub}</div></div><div class="lmeta">~${l.time} min ${state.done.includes(l.id)?'· ✅':''}</div>`;
+  d.onclick=()=>show(i);nav.appendChild(d);
+});
+
+// build views
+const views=document.getElementById('lessonViews');
+LESSONS.forEach((l,i)=>{
+  const v=document.createElement('div');v.className='lesson-view';v.id='view-'+l.id;
+  const prev=i>0?`<button class="btn secondary" onclick="show(${i-1})">← ${LESSONS[i-1].title}</button>`:'<span></span>';
+  const next=i<LESSONS.length-1?`<button class="btn" onclick="show(${i+1})">${LESSONS[i+1].title} →</button>`:'<button class="btn" onclick="finish()">🏆 Finish course</button>';
+  v.innerHTML=`<div class="crumbs"><button onclick="home()">☰ Course</button><span>/ Lesson ${i} of ${LESSONS.length-1}</span></div>
+  <h2 class="lt">${l.title}</h2><div class="ltag">${l.sub} · ~${l.time} min</div>
+  <div class="card">${l.html}</div>
+  ${i<LESSONS.length-1?`<div class="checkline"><input type="checkbox" id="ck-${l.id}" onchange="mark('${l.id}',this.checked)"><label for="ck-${l.id}">Mark lesson complete</label></div>`:''}
+  <div class="navbtns">${prev}${next}</div>`;
+  views.appendChild(v);
+});
+
+// build quiz
+const qz=document.getElementById('quiz');
+QUIZ.forEach((item,qi)=>{
+  const d=document.createElement('div');d.className='quiz-q card';
+  d.innerHTML=`<h4>${qi+1}. ${item.q}</h4>`+item.opts.map((o,oi)=>`<button class="quiz-opt" data-q="${qi}" data-o="${oi}" onclick="answer(this,${qi},${oi})">${String.fromCharCode(65+oi)}. ${o}</button>`).join('')+`<div class="quiz-exp" id="exp-${qi}">💡 ${item.exp}</div>`;
+  qz.appendChild(d);
+});
+let qCorrect=0,qAnswered=0;
+function answer(btn,qi,oi){
+  if(btn.parentElement.dataset.done)return;
+  btn.parentElement.dataset.done=1;qAnswered++;
+  const correct=QUIZ[qi].a;
+  btn.parentElement.querySelectorAll('.quiz-opt').forEach((b,idx)=>{
+    if(idx===correct)b.classList.add('correct');
+    else if(idx===oi&&oi!==correct)b.classList.add('wrong');
+  });
+  if(oi===correct)qCorrect++;
+  document.getElementById('exp-'+qi).classList.add('show');
+  if(qAnswered===QUIZ.length){
+    const s=document.getElementById('quizScore');s.style.display='block';
+    s.innerHTML=`<h3 style="margin-top:0">Score: ${qCorrect}/${QUIZ.length}</h3>`+(qCorrect===5?"Perfect — you're ready to run a lean setup. 🎉":qCorrect>=3?"Solid — skim the lessons behind the ones you missed.":"Re-read Lesson 0; the mental model carries everything else.");
+  }
+}
+function finish(){
+  if(!state.done.includes('05')){state.done.push('05');save();updateProgress();}
+  confettiBlast();
+  setTimeout(home,1200);
+}
+function mark(id,checked){
+  if(checked&&!state.done.includes(id))state.done.push(id);
+  if(!checked)state.done=state.done.filter(x=>x!==id);
+  save();updateProgress();
+}
+function updateProgress(){
+  const n=state.done.length;
+  document.getElementById('pbarfill').style.width=(n/LESSONS.length*100)+'%';
+  document.getElementById('ptext').textContent=`${n} / ${LESSONS.length} complete`;
+  LESSONS.forEach(l=>{const c=document.getElementById('nav-'+l.id);if(c)c.classList.toggle('done',state.done.includes(l.id));});
+}
+function show(i){
+  document.getElementById('home').style.display='none';
+  document.querySelectorAll('.lesson-view').forEach(v=>v.classList.remove('active'));
+  const v=document.getElementById('view-'+LESSONS[i].id);v.classList.add('active');
+  const ck=document.getElementById('ck-'+LESSONS[i].id);if(ck)ck.checked=state.done.includes(LESSONS[i].id);
+  window.scrollTo({top:0});
+}
+function home(){
+  document.getElementById('home').style.display='block';
+  document.querySelectorAll('.lesson-view').forEach(v=>v.classList.remove('active'));
+  updateProgress();window.scrollTo({top:0});
+}
+function confettiBlast(){
+  const c=document.getElementById('confetti'),x=c.getContext('2d');
+  c.style.display='block';c.width=innerWidth;c.height=innerHeight;
+  const ps=Array.from({length:120},()=>({x:Math.random()*c.width,y:-20-Math.random()*200,r:3+Math.random()*5,vy:2+Math.random()*4,vx:-1+Math.random()*2,col:['#4fc3f7','#f78166','#3fb950','#d29922','#a371f7'][~~(Math.random()*5)]}));
+  let t=0;(function anim(){x.clearRect(0,0,c.width,c.height);t++;
+    ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;x.fillStyle=p.col;x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill();});
+    if(t<160)requestAnimationFrame(anim);else{c.style.display='none';}})();
+}
+updateProgress();
+</script>
+</body>
+</html>
