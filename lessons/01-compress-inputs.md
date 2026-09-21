@@ -1,13 +1,59 @@
 # Lesson 1 — Stop sending junk to the model
 **⏱ 4 minutes · Tool: [Headroom](https://github.com/headroomlabs-ai/headroom)**
 
-## The idea
+## Plain English first
 
-Headroom is a free, open-source proxy that sits **between your agent and the model** and compresses what flows through: tool outputs, logs, file reads, RAG chunks, even conversation history. Compression runs **locally on your machine** — nothing is shipped to a third party.
+Every time your AI agent (Claude Code, Cursor…) does anything, it ships a giant bundle of text to the AI company's servers — including all the files it read and logs it collected. Most of that bundle is fat: repeated JSON, log lines, search results nobody needed.
 
-The clever part: it's **reversible compression**. Originals are cached locally, and the model can pull the full text back when it genuinely needs it. Compressed view first, full fidelity on demand.
+**Headroom** is a free tool that shrinks that bundle **before it leaves your laptop**. Think of it as vacuum-sealing your luggage: same stuff, way smaller, and you can un-seal any bag when you actually need what's inside.
 
-## What the benchmarks actually say
+> 💡 **Analogy:** Headroom is a *mailroom* between your agent and the AI. Every package (file read, log, search result) passes through it. The mailroom flattens bulky boxes into slim envelopes, keeps the originals in a back room, and — this is the clever part — the AI can request the full original anytime it needs it. Nothing is destroyed, nothing leaves your machine un-shrunk.
+
+## Three words you'll see, decoded
+
+| Word | What it actually means |
+|---|---|
+| `proxy` | A middleman. Your agent sends its traffic to this little program on your laptop, and it forwards it to the AI — after shrinking it. |
+| `pip install` | "Download and install this program." pip is the app store for Python tools. One command, done. |
+| `headroom wrap claude` | "Start watching my Claude Code." It launches Claude Code as usual, but routed through the mailroom. `unwrap` puts it back to normal. Completely reversible. |
+
+## Do it yourself — step by step
+
+**Step 0 — open Terminal.** On a Mac: press `⌘ + Space`, type "Terminal", hit Enter. You'll see a window with a blinking cursor waiting for commands. That's it — you type a line, press Enter, the computer does the thing.
+
+**Step 1 — install Headroom** (you need Python; most Macs have it — if Step 1 errors with "command not found", install Python free from [python.org/downloads](https://www.python.org/downloads/) and try again):
+
+```bash
+pip install "headroom-ai[all]"
+```
+
+*What you'll see:* a stream of "Downloading… Installing…" lines for ~30 seconds, then your normal prompt returns. Nothing visual changed — the program now exists on your machine.
+
+**Step 2 — turn it on for Claude Code:**
+
+```bash
+headroom wrap claude
+```
+
+*What you'll see:* a couple of startup lines from Headroom, then Claude Code opens exactly like always. Use it normally — work on a real task, let it read files, run searches. The shrinking happens invisibly in the background.
+
+(Alternative: `headroom proxy --port 8787` runs just the mailroom, for any AI tool that can point at it.)
+
+**Step 3 — check the damage report:**
+
+```bash
+headroom savings
+```
+
+*What you'll see:* a number of tokens (and roughly dollars) you didn't send. It starts near zero and grows as you work. Watching it climb is weirdly satisfying.
+
+**Changed your mind?** One command and your setup is exactly as before:
+
+```bash
+headroom unwrap claude
+```
+
+## What the benchmarks say (for skeptics)
 
 Measured with the real tokenizer ([reproducible in the repo](https://github.com/headroomlabs-ai/headroom)):
 
@@ -18,41 +64,16 @@ Measured with the real tokenizer ([reproducible in the repo](https://github.com/
 | Codebase exploration | 58,801 | 33,895 | **42%** |
 | GitHub issue triage | 46,067 | 32,429 | **30%** |
 
-Tagline: *"20% fewer tokens for coding agents, 60–95% fewer tokens for JSON, same answers."* Note the honesty — coding agents get ~20%, not the headline 95%.
-
-## Hands-on (2 minutes)
-
-```bash
-pip install "headroom-ai[all]"
-
-# Option A: wrap your agent (starts proxy + configures Claude Code)
-headroom wrap claude
-
-# Option B: run as a plain proxy and point any OpenAI-compatible client at it
-headroom proxy --port 8787
-```
-
-Then run your agent through the wrapper instead of plain `claude`. After a few days, `headroom savings` shows your running total. Undo anytime with:
-
-```bash
-headroom unwrap claude
-```
+Tagline: *"20% fewer tokens for coding agents, 60–95% fewer tokens for JSON, same answers."* (JSON = the bracket-and-quote data format programs use to talk to each other — extremely repetitive, so it shrinks brilliantly.) Note the honesty — coding agents get ~20%, not the headline 95%. Translation: if you normally hit your limit on Thursday, expect to hit it around Friday–Saturday. Not magic — but real.
 
 ## Know before you install
 
-- **Telemetry:** an anonymous beacon is ON by default (sends compression ratios + model IDs, never code). Turn it off: `HEADROOM_BEACON=off`, or `DO_NOT_TRACK=1`, or run with `--offline`.
-- **Expectation setting:** compression scales with payload repetitiveness. Repeated JSON and log lines get crushed; plain prose barely moves.
-- **Latency is negligible:** ~0.2 ms on a 10K-token JSON payload — far below network time.
-- **Bonus — output trimming** (off by default):
-  ```bash
-  export HEADROOM_OUTPUT_SHAPER=1
-  ```
-  (Details in Lesson 3.)
+⚠️ **The tool "phones home" by default** — an automatic status ping (called *telemetry*) that reports usage stats like compression ratios and which model you used. It never includes your code, but you can turn it off with `HEADROOM_BEACON=off`, `DO_NOT_TRACK=1`, or `--offline`. Speed cost of the mailroom itself: ~0.2 ms per package — you'll never notice it.
 
-✅ **Check yourself:** Why does a compression proxy not break your provider's prompt caching?
+✅ **Check yourself:** Why doesn't the compression proxy break the discount the AI company gives you for repeat conversation text?
 
 <details><summary>Answer</summary>
-It compresses only newly added bytes, leaving the earlier prefix untouched — so the provider's KV-cache prefix still matches and the cache discount still applies.
+The AI company gives a "loyalty discount" on any text identical to what you've already sent before (they keep it warm on their servers instead of re-charging full price). Headroom only shrinks the <em>new</em> stuff and leaves everything already sent byte-for-byte identical — so the discount still kicks in.
 </details>
 
 → Next: [Lesson 2 — Stop reading the whole file](02-smart-context.md)
