@@ -236,6 +236,7 @@ const C={violet:'#6c4df6',coral:'#ff5c4d',amber:'#ffb100',teal:'#00b88a',pink:'#
 const LESSONS=[
  {id:"00",title:"Where your tokens actually go",sub:"The mental model — see the spend before you fix it",time:3,color:C.violet,
   html:`
+  <div class="tip">🎒 <strong>What you need for this course:</strong> a laptop, and any AI coding agent (Claude Code, Cursor, Codex) used at least once. That's it. Lesson 1 will teach you the few technical words you need — terminal, install, proxy — from zero. If you can type a sentence and press Enter, you can finish this course.</div>
   <p>Run a thought experiment. Last time your agent burned through its limit mid-refactor, how much of that was your typed instructions?</p>
   <p>For most developers: <strong>surprisingly little.</strong> Which is exactly why "write shorter prompts" advice never moves the needle.</p>
   <h3>The three ways you overpay</h3>
@@ -250,27 +251,36 @@ const LESSONS=[
   <details><summary>Reveal answer</summary>Because tool results stay in the conversation context and get re-sent to the model on every subsequent turn of the session.</details></div>`},
  {id:"01",title:"Stop sending junk to the model",sub:"Leak #1 · Tool: Headroom · compression proxy",time:4,color:C.coral,
   html:`
-  <p><a href="https://github.com/headroomlabs-ai/headroom" target="_blank">Headroom</a> is a free, open-source proxy that sits <strong>between your agent and the model</strong> and compresses what flows through: tool outputs, logs, file reads, RAG chunks, even conversation history. Compression runs <strong>locally on your machine</strong> — nothing ships to a third party.</p>
-  <p>The clever part: it's <strong>reversible compression</strong>. Originals are cached locally, and the model can pull full text back when it genuinely needs it.</p>
-  <h3>The honest benchmarks</h3>
+  <p><strong>Plain English first.</strong> Every time your AI agent (Claude Code, Cursor…) does anything, it ships a giant bundle of text to the AI company's servers — including all the files it read and logs it collected. Most of that bundle is fat: repeated JSON, log lines, search results nobody needed.</p>
+  <p><a href="https://github.com/headroomlabs-ai/headroom" target="_blank">Headroom</a> is a free tool that shrinks that bundle <strong>before it leaves your laptop</strong>. Think of it as vacuum-sealing your luggage: same stuff, way smaller, and you can un-seal any bag when you actually need what's inside.</p>
+  <div class="tip">💡 <strong>Analogy:</strong> Headroom is a <em>mailroom</em> between your agent and the AI. Every package (file read, log, search result) passes through it. The mailroom flattens bulky boxes into slim envelopes, keeps the originals in a back room, and — this is the clever part — the AI can request the full original anytime it needs it. Nothing is destroyed, nothing leaves your machine un-shrunk.</div>
+  <h3>Three words you'll see, decoded</h3>
+  <table>
+    <tr><th>Word</th><th>What it actually means</th></tr>
+    <tr><td><code>proxy</code></td><td>A middleman. Your agent sends its traffic to this little program on your laptop, and it forwards it to the AI — after shrinking it.</td></tr>
+    <tr><td><code>pip install</code></td><td>"Download and install this program." pip is the app store for Python tools. One command, done.</td></tr>
+    <tr><td><code>headroom wrap claude</code></td><td>"Start watching my Claude Code." It launches Claude Code as usual, but routed through the mailroom. <code>unwrap</code> puts it back to normal. Completely reversible.</td></tr>
+  </table>
+  <h3>Do it yourself — step by step</h3>
+  <p><strong>Step 0 — open Terminal.</strong> On a Mac: press <code>⌘ + Space</code>, type "Terminal", hit Enter. You'll see a window with a blinking cursor waiting for commands. That's it — you type a line, press Enter, the computer does the thing.</p>
+  <p><strong>Step 1 — install Headroom</strong> (you need Python; most Macs have it — if Step 1 errors with "command not found", install Python free from <a href="https://www.python.org/downloads/" target="_blank">python.org/downloads</a> and try again):</p>
+  <pre><code>pip install "headroom-ai[all]"</code></pre>
+  <p><em>What you'll see:</em> a stream of "Downloading… Installing…" lines for ~30 seconds, then your normal prompt returns. Nothing visual changed — the program now exists on your machine.</p>
+  <p><strong>Step 2 — turn it on for Claude Code:</strong></p>
+  <pre><code>headroom wrap claude</code></pre>
+  <p><em>What you'll see:</em> a couple of startup lines from Headroom, then Claude Code opens exactly like always. Use it normally — work on a real task, let it read files, run searches. The shrinking happens invisibly in the background.</p>
+  <p><strong>Step 3 — check the damage report:</strong></p>
+  <pre><code>headroom savings</code></pre>
+  <p><em>What you'll see:</em> a number of tokens (and roughly dollars) you didn't send. It starts near zero and grows as you work. Watching it climb is weirdly satisfying.</p>
+  <p><strong>Changed your mind?</strong> One command and your setup is exactly as before:</p>
+  <pre><code>headroom unwrap claude</code></pre>
+  <h3>What the benchmarks say (for skeptics)</h3>
   <table><tr><th>Scenario</th><th>Before</th><th>After</th><th>Saved</th></tr>
   <tr><td>Code search (100 results)</td><td>17,199</td><td>13,597</td><td><strong>21%</strong></td></tr>
   <tr><td>SRE incident debugging</td><td>55,957</td><td>24,340</td><td><strong>57%</strong></td></tr>
   <tr><td>Codebase exploration</td><td>58,801</td><td>33,895</td><td><strong>42%</strong></td></tr>
   <tr><td>GitHub issue triage</td><td>46,067</td><td>32,429</td><td><strong>30%</strong></td></tr></table>
-  <p>Tagline: <em>"20% fewer tokens for coding agents, 60–95% fewer tokens for JSON, same answers."</em> Note the honesty — coding agents get ~20%, not the headline 95%.</p>
-  <h3>Hands-on — two minutes</h3>
-  <pre><code>pip install "headroom-ai[all]"
-
-# Option A: wrap your agent (proxy + auto-config)
-headroom wrap claude
-
-# Option B: plain proxy for any OpenAI-compatible client
-headroom proxy --port 8787
-
-# Undo anytime
-headroom unwrap claude</code></pre>
-  <p>After a few days, <code>headroom savings</code> shows your running total — watching it climb is weirdly satisfying.</p>
+  <p>Tagline: <em>"20% fewer tokens for coding agents, 60–95% fewer tokens for JSON, same answers."</em> Note the honesty — coding agents get ~20%, not the headline 95%. Translation: if you normally hit your limit on Thursday, expect to hit it around Friday–Saturday. Not magic — but real.</p>
   <div class="note">⚠️ <strong>Before you install:</strong> an anonymous telemetry beacon is ON by default (sends ratios + model IDs, never code). Disable with <code>HEADROOM_BEACON=off</code>, <code>DO_NOT_TRACK=1</code>, or <code>--offline</code>. Latency is negligible: ~0.2 ms on a 10K-token payload.</div>
   <div class="check"><h4>✅ Check yourself</h4>
   <p>Why doesn't the compression proxy break your provider's prompt caching?</p>
