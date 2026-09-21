@@ -306,31 +306,46 @@ pipx install "headroom-ai[all]"</code></pre>
   <details><summary>Reveal answer</summary>The AI company gives a "loyalty discount" on any text identical to what you've already sent before (they keep it warm on their servers instead of re-charging full price). Headroom only shrinks the <em>new</em> stuff and leaves everything already sent byte-for-byte identical — so the discount still kicks in.</details></div>`},
  {id:"02",title:"Stop reading the whole file",sub:"Leak #2 · Semantic navigation · RTK · context packs",time:4,color:C.amber,
   html:`
-  <p>Your agent needed nine lines. It read 900. Then it ran a search that returned 100 matches — and every one rode in context for the next twenty turns (Lesson 0's forgetful consultant, re-reading the report every meeting).</p>
-  <h3>Decoder for this lesson</h3>
+  <p><strong>One story, then everything makes sense.</strong> You type into your agent:</p>
+  <pre><code>"Where do we check if a user's session has expired?"</code></pre>
+  <p>A reasonable question. But watch what the agent has to do to answer it — it can't just "know" your code, it has to <strong>read your files and paste them into its working memory</strong> (context, from Lesson 0):</p>
+  <ul>
+    <li>It searches for "session" → <strong>214 matching lines</strong> pasted into memory</li>
+    <li>It guesses the answer lives in <code>auth.py</code> → pastes <strong>all 612 lines</strong> of the file. The answer is on lines 305–309. <strong>Five lines.</strong></li>
+    <li>It's not sure, so it opens two more files → <strong>+900 lines</strong></li>
+  </ul>
+  <p>To answer one question, it pasted <strong>~1,700 lines of code into memory</strong> — and per Lesson 0, all of it gets re-sent with every future message in the session. That's the leak this lesson plugs. And here's the good news up front: <strong>all three fixes below happen automatically</strong> once you've done Lesson 1's <code>headroom wrap claude</code>. Your job in this lesson is mostly to <em>recognize</em> the leak.</p>
+  <h3>Fix 1 — teach the agent to use the index, not the whole book</h3>
+  <p><strong>Semantic navigation</strong> sounds fancy. It just means: instead of "read the entire book to find one paragraph," the agent learns to <strong>use the index</strong> — look up the exact function by name, or read exactly lines 305–309.</p>
   <table>
-    <tr><th>Term</th><th>Plain English</th></tr>
-    <tr><td><code>grep</code></td><td>The built-in terminal search command. It scans files for text and prints <em>every</em> matching line — can easily dump hundreds of lines.</td></tr>
-    <tr><td><code>git diff</code></td><td>"Show me what changed." Prints only the edited lines, plus a few lines of surrounding context.</td></tr>
-    <tr><td>symbol</td><td>The name of one function, class, or variable — like <code>parseConfig</code>. Code is organized into these named building blocks.</td></tr>
-    <tr><td>MCP server</td><td>A plug-in that adds new skills to your agent (MCP is a standard plug socket for AI tools — like app extensions). The Serena plug-in teaches your agent to look up symbols and line ranges instead of swallowing whole files.</td></tr>
+    <tr><th></th><th>Without it (the leak)</th><th>With it</th></tr>
+    <tr><td>Agent's move</td><td>paste all 612 lines of auth.py</td><td>paste lines 305–309 (5 lines)</td></tr>
+    <tr><td>What it costs</td><td>~5,000 tokens, re-sent every turn</td><td>~50 tokens</td></tr>
+    <tr><td>Answer quality</td><td>same</td><td>same</td></tr>
   </table>
-  <h3>Fix 1 — navigate, don't ingest</h3>
-  <p><strong>Semantic navigation tools</strong> (e.g., the Serena MCP server — which Headroom's <code>wrap</code> installs automatically) give the agent symbol-level operations: "find <code>parseConfig</code>", "show lines 40–60", "list methods of this class" — instead of whole-file dumps. One instruction line changes behavior:</p>
+  <p>The tool that enables this is a <strong>plug-in called Serena</strong> — and Headroom's <code>wrap</code> from Lesson 1 installs it for you automatically. No action needed. (If you skip Headroom entirely, you can still nudge behavior by pasting this line into your project's instruction file — Lesson 4 explains those:</p>
   <pre><code>"When exploring, prefer reading specific line ranges
- and symbol definitions over whole files."</code></pre>
-  <h3>Fix 2 — compress command output at the source</h3>
-  <p>Agents spend a lot of time running terminal commands and reading the results. <strong>RTK</strong> intercepts the noisiest ones — <code>git diff</code>, <code>grep</code>, <code>ls</code> (list files), <code>tree</code> (show folder structure), <code>log</code> — and prints compact versions instead. Reported: <strong>20–40% fewer input tokens</strong> when the session involves lots of commands.</p>
-  <h3>Fix 3 — pack context deliberately</h3>
-  <p>For "brief the agent on this repo" moments, tools like <strong>repomix</strong> or <strong>codesight</strong> produce a structured summary of the codebase — the map, minus the dead weight and boilerplate — instead of concatenating every file into one monster document. Combined with the above, reports of <strong>60–70% total bill reduction</strong>.</p>
-  <table><tr><th>The agent asks for…</th><th>Cheap answer</th><th>Expensive answer</th></tr>
-  <tr><td>"Where is X defined?"</td><td>symbol lookup / line range</td><td>read whole file</td></tr>
-  <tr><td>"What changed?"</td><td><code>git diff</code> (compressed)</td><td>paste the module</td></tr>
-  <tr><td>"How is this repo organized?"</td><td>pre-built context pack</td><td>free-range exploration</td></tr></table>
-  <div class="tip">💡 <strong>See the leak yourself:</strong> run a normal session, then ask your agent <em>"List your tool calls this session with approximate token counts."</em> Most people find one or two file reads plus a grep dump caused most of the session's context.</div>
+ and symbol definitions over whole files."</code></pre>)
+  <h3>Fix 2 — shrink the command receipts</h3>
+  <p>Agents constantly run terminal commands and paste the full output into memory — like taping every receipt into a scrapbook, then carrying the scrapbook everywhere. <strong>RTK</strong> is a tool that prints a <em>compact summary</em> instead of the raw dump: same facts, fraction of the space.</p>
+  <table>
+    <tr><th>Command the agent ran</th><th>Raw output</th><th>With RTK</th></tr>
+    <tr><td>"show me what changed" (<code>git diff</code>)</td><td>520 lines</td><td>~80 lines, same info</td></tr>
+    <tr><td>"search for 'session'" (<code>grep</code>)</td><td>214 lines</td><td>top matches only</td></tr>
+  </table>
+  <p>Reported effect: <strong>20–40% fewer input tokens</strong> when the session involves lots of commands. RTK is the same story as Lesson 1 — a smaller mailroom — and optional. Headroom already shrinks much of this for you.</p>
+  <h3>Fix 3 — send a briefing memo, not the whole library</h3>
+  <p>Sometimes you <em>want</em> to give the agent the big picture ("here's how this project is organized"). Tools like <strong>repomix</strong> or <strong>codesight</strong> build a clean summary of your codebase — the map, without the boilerplate — so you hand the agent a 2-page memo instead of dumping every file into the conversation. Only relevant if you regularly start sessions that way; otherwise skip it.</p>
+  <h3>So what do I actually <em>do</em>?</h3>
+  <table>
+    <tr><th>If you…</th><th>Then…</th></tr>
+    <tr><td>did Lesson 1's <code>headroom wrap claude</code></td><td>✅ nothing — Fix 1 came bundled, Fixes 2–3 are largely covered</td></tr>
+    <tr><td>skipped Lesson 1</td><td>paste the "prefer line ranges" line above into your instruction file</td></tr>
+    <tr><td>want to <em>see</em> the leak with your own eyes</td><td>ask your agent: <em>"list your tool calls this session and roughly how many tokens each returned"</em> — expect one or two file reads to dominate</td></tr>
+  </table>
   <div class="check"><h4>✅ Check yourself</h4>
-  <p>Your agent greps for a name and gets 100 results. How many times does the model pay for them?</p>
-  <details><summary>Reveal answer</summary>Once per subsequent turn — results persist in context until compacted or dropped. Ten more turns ≈ ten times the cost.</details></div>`},
+  <p>Your agent searches for a name and gets 100 matching lines. How many times does the model pay for those lines?</p>
+  <details><summary>Reveal answer</summary>Every remaining turn of the session — they're pasted into memory and re-sent with each message. If you keep working for 20 more turns, that's ~20× the original cost. This is why one lazy search can eat an afternoon of usage limit.</details></div>`},
  {id:"03",title:"Stop paying for ceremony",sub:"Leak #3 · Output shaping · the zero-tool habits",time:3,color:C.teal,
   html:`
   <p>You pay for input once per turn — but <strong>output tokens typically cost several times more</strong> than input on frontier models. And a lot of output is pure ceremony:</p>
