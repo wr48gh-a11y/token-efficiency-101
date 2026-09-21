@@ -21,13 +21,21 @@ Every time your AI agent (Claude Code, Cursor…) does anything, it ships a gian
 
 **Step 0 — open Terminal.** On a Mac: press `⌘ + Space`, type "Terminal", hit Enter. You'll see a window with a blinking cursor waiting for commands. That's it — you type a line, press Enter, the computer does the thing.
 
-**Step 1 — install Headroom** (you need Python; most Macs have it — if Step 1 errors with "command not found", install Python free from [python.org/downloads](https://www.python.org/downloads/) and try again):
+**Step 1 — install Headroom.** Try this first:
 
 ```bash
 pip install "headroom-ai[all]"
 ```
 
-*What you'll see:* a stream of "Downloading… Installing…" lines for ~30 seconds, then your normal prompt returns. Nothing visual changed — the program now exists on your machine.
+**If Terminal says `command not found: pip`** — that's common and harmless. On many Macs the installer is named `pip3` instead. Try:
+
+```bash
+pip3 install "headroom-ai[all]"
+```
+
+Still "command not found" for both? Your Mac is missing Python entirely — install it free from [python.org/downloads](https://www.python.org/downloads/), then reopen Terminal and retry.
+
+*What you'll see when it works:* a stream of "Downloading… Installing…" lines for ~30 seconds, then your normal prompt returns. Nothing visual changed — the program now exists on your machine.
 
 **Step 2 — turn it on for Claude Code:**
 

@@ -274,9 +274,12 @@ const LESSONS=[
   </table>
   <h3>Do it yourself — step by step</h3>
   <p><strong>Step 0 — open Terminal.</strong> On a Mac: press <code>⌘ + Space</code>, type "Terminal", hit Enter. You'll see a window with a blinking cursor waiting for commands. That's it — you type a line, press Enter, the computer does the thing.</p>
-  <p><strong>Step 1 — install Headroom</strong> (you need Python; most Macs have it — if Step 1 errors with "command not found", install Python free from <a href="https://www.python.org/downloads/" target="_blank">python.org/downloads</a> and try again):</p>
+  <p><strong>Step 1 — install Headroom.</strong> Try this first:</p>
   <pre><code>pip install "headroom-ai[all]"</code></pre>
-  <p><em>What you'll see:</em> a stream of "Downloading… Installing…" lines for ~30 seconds, then your normal prompt returns. Nothing visual changed — the program now exists on your machine.</p>
+  <p><strong>If Terminal says <code>command not found: pip</code></strong> — that's common and harmless. On many Macs the installer is named <code>pip3</code> instead. Try:</p>
+  <pre><code>pip3 install "headroom-ai[all]"</code></pre>
+  <p>Still "command not found" for both? Your Mac is missing Python entirely — install it free from <a href="https://www.python.org/downloads/" target="_blank">python.org/downloads</a>, then reopen Terminal and retry.</p>
+  <p><em>What you'll see when it works:</em> a stream of "Downloading… Installing…" lines for ~30 seconds, then your normal prompt returns. Nothing visual changed — the program now exists on your machine.</p>
   <p><strong>Step 2 — turn it on for Claude Code:</strong></p>
   <pre><code>headroom wrap claude</code></pre>
   <p><em>What you'll see:</em> a couple of startup lines from Headroom, then Claude Code opens exactly like always. Use it normally — work on a real task, let it read files, run searches. The shrinking happens invisibly in the background.</p>
