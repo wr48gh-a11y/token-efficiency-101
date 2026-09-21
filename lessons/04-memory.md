@@ -5,7 +5,17 @@ Every fresh session, your agent knows nothing. So you (or it) re-derive your arc
 
 ## Tier 1: The instruction file (free, 5 minutes, do this today)
 
-Every major agent reads a project instructions file at startup — `CLAUDE.md`, `AGENTS.md`, `.cursorrules`. Think of it as a **sticky note on the door**: the agent automatically reads it before every session, so anything written there is something you never have to explain again. Keep it short and factual:
+Every major agent reads a project instructions file at startup — `CLAUDE.md`, `AGENTS.md`, `.cursorrules`. Think of it as a **sticky note on the door**: the agent automatically reads it before every session, so anything written there is something you never have to explain again.
+
+**Where it goes:** in your project's top folder (same folder as your code), named exactly `CLAUDE.md` for Claude Code. **Easiest way to create it:** don't write it yourself — open a session in your project and type:
+
+```text
+"Create a CLAUDE.md for this project: what it is,
+folder layout, coding conventions, and anything
+I should never touch. Keep it under 30 lines."
+```
+
+The agent knows your code better than you'd want to type anyway. Then skim its draft, delete anything wrong or obvious, and you're done. Keep it short and factual:
 
 ```markdown
 # Project

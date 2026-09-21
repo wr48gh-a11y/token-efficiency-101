@@ -348,12 +348,24 @@ pipx install "headroom-ai[all]"</code></pre>
   <details><summary>Reveal answer</summary>Every remaining turn of the session — they're pasted into memory and re-sent with each message. If you keep working for 20 more turns, that's ~20× the original cost. This is why one lazy search can eat an afternoon of usage limit.</details></div>`},
  {id:"03",title:"Stop paying for ceremony",sub:"Leak #3 · Output shaping · the zero-tool habits",time:3,color:C.teal,
   html:`
-  <p>You pay for input once per turn — but <strong>output tokens typically cost several times more</strong> than input on frontier models. And a lot of output is pure ceremony:</p>
-  <ul>
-    <li>The <em>"Great, let me now..."</em> preamble</li>
-    <li>Your own file printed straight back at you as a "summary"</li>
-    <li>Deep extended thinking spent on reading one config file</li>
-  </ul>
+  <p><strong>Quick story.</strong> You ask your agent for a tiny change — "rename this variable." Thirty seconds of thinking, and back comes:</p>
+  <pre><code>Great! Let me take a look at that for you. 🎉
+
+First, I'll explain my approach:
+
+1. I will locate the variable in question.
+2. I will rename it carefully.
+3. I will verify everything still works.
+
+Here's the file with your change (note how I've
+reproduced your entire 40-line file, even though
+only 1 line changed):
+
+    ... 40 lines you already know ...
+
+Let me know if you'd like me to explain anything,
+or if you have any other questions! ✨</code></pre>
+  <p>One line of actual work. The rest — the preamble, the plan recap, your own file echoed back, the cheery sign-off — is <strong>ceremony</strong>: words that cost output-token prices (several × input prices) and taught nobody anything.</p>
   <h3>Decoder for this lesson</h3>
   <table>
     <tr><th>Term</th><th>Plain English</th></tr>
@@ -376,6 +388,15 @@ headroom proxy --port 8787</code></pre>
 - Skip preamble and closing summaries.
 - Prefer editing existing code over rewriting files.
 - Don't restate the task before solving it.</code></pre>
+  <p>With those rules, that same rename comes back as:</p>
+  <pre><code>Renamed userName → currentUser in src/api.ts (line 42).
+2 other references updated.</code></pre>
+  <h3>So what do I actually <em>do</em>?</h3>
+  <table>
+    <tr><th>If you…</th><th>Then…</th></tr>
+    <tr><td>just want the 2-minute version (most people)</td><td>paste the 4 rules above into your instruction file (Lesson 4 shows exactly where) — done, no tools</td></tr>
+    <tr><td>already run <code>headroom wrap claude</code> and want more</td><td>run <code>export HEADROOM_OUTPUT_SHAPER=1</code>, then <code>headroom proxy --port 8787</code> — it trims output on the model's side automatically</td></tr>
+  </table>
   <div class="check"><h4>✅ Check yourself</h4>
   <p>Why append "be terse" at the <em>end</em> of the system prompt instead of rewriting it?</p>
   <details><summary>Reveal answer</summary>Because of the loyalty discount (prompt cache): the AI company only discounts text that's identical to before. Changing the middle or start would void the discount on everything after it. Appending at the end leaves all the earlier text untouched, so you keep the discount <em>and</em> still steer behavior.</details></div>`},
@@ -383,7 +404,12 @@ headroom proxy --port 8787</code></pre>
   html:`
   <p>Every fresh session, your agent knows nothing. So you (or it) re-derive your architecture, conventions, and naming rules — and <strong>you pay for that re-explanation every session</strong>, in time and tokens.</p>
   <h3>Tier 1 — the instruction file (free, 5 min, do today)</h3>
-  <p>Every major agent reads a project instructions file at startup — <code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.cursorrules</code>. Think of it as a <strong>sticky note on the door</strong>: the agent automatically reads it before every session, so anything written there is something you never have to explain again. Keep it short and factual:</p>
+  <p>Every major agent reads a project instructions file at startup — <code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.cursorrules</code>. Think of it as a <strong>sticky note on the door</strong>: the agent automatically reads it before every session, so anything written there is something you never have to explain again.</p>
+  <p><strong>Where it goes:</strong> in your project's top folder (same folder as your code), named exactly <code>CLAUDE.md</code> for Claude Code. <strong>Easiest way to create it:</strong> don't write it yourself — open a session in your project and type:</p>
+  <pre><code>"Create a CLAUDE.md for this project: what it is,
+folder layout, coding conventions, and anything
+I should never touch. Keep it under 30 lines."</code></pre>
+  <p>The agent knows your code better than you'd want to type anyway. Then skim its draft, delete anything wrong or obvious, and you're done. Keep it short and factual:</p>
   <pre><code># Project
 Monorepo: FastAPI backend in /api, React in /web,
 shared types in /packages/shared.

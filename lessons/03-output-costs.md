@@ -1,18 +1,37 @@
 # Lesson 3 — Stop paying for ceremony
-**⏱ 3 minutes · Tool: output shaping (e.g., Headroom's output shaper)**
+**⏱ 3 minutes · Tool: output shaping (optional) · zero-tool version included**
 
-You pay for input once per turn — but **output tokens typically cost several times more** than input on frontier models. And a lot of output is pure ceremony:
+## Quick story
 
-- The *"Great, let me now..."* preamble
-- Your own file printed straight back at you as a "summary"
-- Deep extended thinking spent on reading one config file
+You ask your agent for a tiny change — "rename this variable." Thirty seconds of thinking, and back comes:
+
+```text
+Great! Let me take a look at that for you. 🎉
+
+First, I'll explain my approach:
+
+1. I will locate the variable in question.
+2. I will rename it carefully.
+3. I will verify everything still works.
+
+Here's the file with your change (note how I've
+reproduced your entire 40-line file, even though
+only 1 line changed):
+
+    ... 40 lines you already know ...
+
+Let me know if you'd like me to explain anything,
+or if you have any other questions! ✨
+```
+
+One line of actual work. The rest — the preamble, the plan recap, your own file echoed back, the cheery sign-off — is **ceremony**: words that cost output-token prices (several × input prices) and taught nobody anything.
 
 ## Decoder for this lesson
 
 | Term | Plain English |
 |---|---|
 | **system prompt** | The standing instruction sheet the agent reads before every conversation — "you are a coding assistant, do X, never Y." You usually don't see it, but you pay for it every turn. |
-| **thinking tokens** | Newer models can do silent scratch-work before answering ("let me consider…") — visible in pricing as extra output tokens. Useful for hard problems; overkill for reading a config file. |
+| **thinking tokens** | Newer models can do silent scratch-work before answering ("let me consider…") — visible in pricing as extra output tokens. Useful for hard problems; overkill for renaming a variable. |
 | **prompt cache** | The AI company's loyalty discount: text identical to what you sent before is re-charged at a steep discount. Anything that changes your earlier text *voids the discount* for it. |
 
 ## What output shaping does
@@ -31,7 +50,7 @@ Measured honestly: the project holds out 10% of conversations without shaping, a
 
 ## The zero-tool version: habits
 
-If you don't want another proxy, put this in your agent's instruction file (CLAUDE.md / `.cursorrules` / AGENTS.md — see Lesson 4):
+Paste this into your agent's instruction file (CLAUDE.md / `.cursorrules` / AGENTS.md — Lesson 4 shows exactly where):
 
 ```text
 - Don't repeat file contents back to me; summarize changes as diffs.
@@ -40,7 +59,21 @@ If you don't want another proxy, put this in your agent's instruction file (CLAU
 - Don't restate the task before solving it.
 ```
 
-This alone trims a meaningful slice of output — and the model follows it surprisingly well.
+With those rules, the same rename comes back as:
+
+```text
+Renamed userName → currentUser in src/api.ts (line 42).
+2 other references updated.
+```
+
+Same information, ~10% of the tokens, at output prices.
+
+## So what do I actually *do*?
+
+| If you… | Then… |
+|---|---|
+| just want the 2-minute version (most people) | paste the 4 rules above into your instruction file — done, no tools |
+| already run `headroom wrap claude` and want more | `export HEADROOM_OUTPUT_SHAPER=1`, then `headroom proxy --port 8787` — it trims output on the model's side automatically |
 
 ✅ **Check yourself:** Why append "be terse" at the *end* of the system prompt instead of rewriting it?
 
