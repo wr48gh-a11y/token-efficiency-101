@@ -33,7 +33,15 @@ pip install "headroom-ai[all]"
 pip3 install "headroom-ai[all]"
 ```
 
-Still "command not found" for both? Your Mac is missing Python entirely — install it free from [python.org/downloads](https://www.python.org/downloads/), then reopen Terminal and retry.
+**If `pip3` answers with a wall of text ending in `error: externally-managed-environment`** — also fine, and very common on Macs. Translation: your Mac's Python (from Homebrew) protects itself and refuses direct installs. It's telling you to give each app its own private sandbox. The tool for that is `pipx` — the proper app store for Python command-line programs. Run these three lines, one at a time:
+
+```bash
+brew install pipx
+pipx ensurepath
+pipx install "headroom-ai[all]"
+```
+
+Then **quit Terminal completely and reopen it** (so Terminal learns where the new `headroom` command lives), and continue with Step 2. No Homebrew either? Install Python itself from [python.org/downloads](https://www.python.org/downloads/), reopen Terminal, and go back to the first try.
 
 *What you'll see when it works:* a stream of "Downloading… Installing…" lines for ~30 seconds, then your normal prompt returns. Nothing visual changed — the program now exists on your machine.
 

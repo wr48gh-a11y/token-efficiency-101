@@ -278,7 +278,11 @@ const LESSONS=[
   <pre><code>pip install "headroom-ai[all]"</code></pre>
   <p><strong>If Terminal says <code>command not found: pip</code></strong> — that's common and harmless. On many Macs the installer is named <code>pip3</code> instead. Try:</p>
   <pre><code>pip3 install "headroom-ai[all]"</code></pre>
-  <p>Still "command not found" for both? Your Mac is missing Python entirely — install it free from <a href="https://www.python.org/downloads/" target="_blank">python.org/downloads</a>, then reopen Terminal and retry.</p>
+  <p><strong>If <code>pip3</code> answers with a wall of text ending in <code>error: externally-managed-environment</code></strong> — also fine, and very common on Macs. Translation: your Mac's Python (from Homebrew) protects itself and refuses direct installs. It's telling you to give each app its own private sandbox. The tool for that is <code>pipx</code> — the proper app store for Python command-line programs. Run these three lines, one at a time:</p>
+  <pre><code>brew install pipx
+pipx ensurepath
+pipx install "headroom-ai[all]"</code></pre>
+  <p>Then <strong>quit Terminal completely and reopen it</strong> (so Terminal learns where the new <code>headroom</code> command lives), and continue with Step 2. No Homebrew either? Install Python itself from <a href="https://www.python.org/downloads/" target="_blank">python.org/downloads</a>, reopen Terminal, and go back to the first try.</p>
   <p><em>What you'll see when it works:</em> a stream of "Downloading… Installing…" lines for ~30 seconds, then your normal prompt returns. Nothing visual changed — the program now exists on your machine.</p>
   <p><strong>Step 2 — turn it on for Claude Code:</strong></p>
   <pre><code>headroom wrap claude</code></pre>
