@@ -53,6 +53,8 @@ headroom wrap claude
 
 *What you'll see:* a couple of startup lines from Headroom, then Claude Code opens exactly like always. Use it normally — work on a real task, let it read files, run searches. The shrinking happens invisibly in the background.
 
+> 💻 **Using the Claude Code desktop app (or VS Code) instead of the terminal?** The desktop app reads the same settings as the CLI, so with the `wrap` terminal left open its traffic should flow through the mailroom too. The test: use the app for a real task, then run `headroom savings` in another terminal tab — if the number climbs, it's working. If it's stuck at zero, the app is bypassing the proxy; the CLI and VS Code (`headroom wrap vscode-claude`) are the officially supported routes. Either way: **keep the wrap terminal open** — closing it closes the mailroom (the agent still works, just uncompressed).
+
 (Alternative: `headroom proxy --port 8787` runs just the mailroom, for any AI tool that can point at it.)
 
 **Step 3 — check the damage report:**

@@ -287,6 +287,7 @@ pipx install "headroom-ai[all]"</code></pre>
   <p><strong>Step 2 — turn it on for Claude Code:</strong></p>
   <pre><code>headroom wrap claude</code></pre>
   <p><em>What you'll see:</em> a couple of startup lines from Headroom, then Claude Code opens exactly like always. Use it normally — work on a real task, let it read files, run searches. The shrinking happens invisibly in the background.</p>
+  <div class="tip">💻 <strong>Using the Claude Code desktop app (or VS Code) instead of the terminal?</strong> The desktop app reads the same settings as the CLI, so with the <code>wrap</code> terminal left open its traffic should flow through the mailroom too. The test: use the app for a real task, then run <code>headroom savings</code> in another terminal tab — if the number climbs, it's working. If it's stuck at zero, the app is bypassing the proxy; the CLI and VS Code (<code>headroom wrap vscode-claude</code>) are the officially supported routes. Either way: <strong>keep the wrap terminal open</strong> — closing it closes the mailroom (the agent still works, just uncompressed).</div>
   <p><strong>Step 3 — check the damage report:</strong></p>
   <pre><code>headroom savings</code></pre>
   <p><em>What you'll see:</em> a number of tokens (and roughly dollars) you didn't send. It starts near zero and grows as you work. Watching it climb is weirdly satisfying.</p>
